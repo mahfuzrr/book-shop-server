@@ -67,9 +67,8 @@ const authCheck = (req, res, next) => {
 
 // jwt
 app.post('/jwt-token', (req, res) => {
-    const {email, uId} = req.body;
+    const {uId} = req.body;
     const token = jwt.sign({
-        email,
         uId,
     }, process.env.JWT_SECRET, {
         expiresIn: '3 days'
@@ -116,7 +115,7 @@ app.post('/register', (req, res) => {
 
 });
 
-app.get('/get-user-role/:id', (req, res) =>{
+app.get('/get-user-role/:id', authCheck, (req, res) =>{
     const {id} = req.params;
     //console.log(id);
     User.findOne({userId: id}).then((result) => {
@@ -134,7 +133,7 @@ app.get('/get-user-role/:id', (req, res) =>{
 
 
 //add products
-app.post('/add-products', (req, res) => {
+app.post('/add-products', authCheck, (req, res) => {
     const {uId, productName, originalPrice, resalePrice, condition, phone, location, category, year, posted, photoURL} = req.body;
 
     const objects = {
@@ -223,7 +222,7 @@ app.post('/add-products', (req, res) => {
 });
 
 // get seller product
-app.get('/get-seller-products/:uid', (req, res) => {
+app.get('/get-seller-products/:uid', authCheck, (req, res) => {
     const {uid} = req.params;
 
     User.findOne({userId: uid}).populate('myProducts').then((data) => {
@@ -254,7 +253,7 @@ app.get('/get-all-category', (req, res) => {
 });
 
 // get products by category id
-app.get('/get-specific-products/:id', (req, res) => {
+app.get('/get-specific-products/:id', authCheck, (req, res) => {
     const {id} = req.params;
     const updatedId = mongoose.Types.ObjectId(id);
 
@@ -272,11 +271,11 @@ app.get('/get-specific-products/:id', (req, res) => {
 })
 
 // update booked product
-app.patch('/update-booked-product', (req, res) => {
+app.patch('/update-booked-product', authCheck, (req, res) => {
     const {id, phone, location, uid} = req.body;
     const updatedId = mongoose.Types.ObjectId(id);
 
-    Product.updateOne({_id: updatedId}, {$set: {isBooked: true, customerPhone: phone, customerLocation: location}}).then((result) => {
+    Product.updateOne({_id: updatedId}, {$set: {isBooked: true, customerPhone: phone, customerLocation: location, isAdvertised: false}}).then((result) => {
 
         User.updateOne({userId: uid}, {$addToSet: {myOrders: [updatedId]}}).then((upRes) => {
             res.json({
@@ -298,7 +297,7 @@ app.patch('/update-booked-product', (req, res) => {
 });
 
 // delete a product by seller
-app.delete('/delete-product-seller/:id', (req, res) => {
+app.delete('/delete-product-seller/:id', authCheck, (req, res) => {
     const {id} = req.params;
     const updatedId = mongoose.Types.ObjectId(id);
 
@@ -316,7 +315,7 @@ app.delete('/delete-product-seller/:id', (req, res) => {
 })
 
 // get my orders for buyers
-app.get('/get-my-orders/:uid', (req, res) => {
+app.get('/get-my-orders/:uid', authCheck, (req, res) => {
     const {uid} = req.params;
 
     User.findOne({userId: uid}).populate('myOrders').then((data) => {
@@ -330,6 +329,40 @@ app.get('/get-my-orders/:uid', (req, res) => {
             message: err.message,
         })
     });
+});
+
+// advertise items
+app.patch('/advertise-items', authCheck, (req, res) => {
+    const {id} = req.body;
+    const updatedId = mongoose.Types.ObjectId(id);
+
+    Product.updateOne({_id: updatedId}, {$set: {isAdvertised: true}}).then((result) => {
+        res.json({
+            success: true,
+            message: result,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
+
+// get all products for checking advertisement
+app.get('/get-advertise-items', (req, res)=>{
+    Product.find().then((result) => {
+        const resObject = result.filter((data) =>  data.isAdvertised);
+        res.json({
+            success: true,
+            message: resObject,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
 });
 
 

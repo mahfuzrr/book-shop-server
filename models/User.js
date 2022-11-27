@@ -39,12 +39,6 @@ const userSchema = mongoose.Schema(
             ref: 'Product',
         }
     ],
-    advertise:[
-        {
-            type: mongoose.Types.ObjectId,
-            ref: 'Product',
-        }
-    ],
     report:[
         {
             type: mongoose.Types.ObjectId,
