@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const User = require('./models/User');
 const Product = require('./models/Product');
 const Category = require('./models/Category');
+const stripe = require("stripe")('sk_test_51M96csL27rePm2jj8eQxMxF9anpa8togScdwQUI3uH5NCG8ja0iM22fU8EeCJMZyRIzqQrlpAvKZTqnORRCX4Rnf00RbjlPzSN');
 
 const port = process.env.PORT || 5000;
 
@@ -96,8 +97,6 @@ app.post('/register', (req, res) => {
         photoURL,
         role
     };
-
-    console.log(updatedObject);
 
     const newUser = new User(updatedObject);
 
@@ -275,7 +274,7 @@ app.patch('/update-booked-product', authCheck, (req, res) => {
     const {id, phone, location, uid} = req.body;
     const updatedId = mongoose.Types.ObjectId(id);
 
-    Product.updateOne({_id: updatedId}, {$set: {isBooked: true, customerPhone: phone, customerLocation: location, isAdvertised: false}}).then((result) => {
+    Product.updateOne({_id: updatedId}, {$set: {isBooked: true, customerPhone: phone, customerLocation: location}}).then((result) => {
 
         User.updateOne({userId: uid}, {$addToSet: {myOrders: [updatedId]}}).then((upRes) => {
             res.json({
@@ -352,7 +351,7 @@ app.patch('/advertise-items', authCheck, (req, res) => {
 // get all products for checking advertisement
 app.get('/get-advertise-items', (req, res)=>{
     Product.find().then((result) => {
-        const resObject = result.filter((data) =>  data.isAdvertised);
+        const resObject = result.filter((data) =>  data.isAdvertised && !data.isPaid);
         res.json({
             success: true,
             message: resObject,
@@ -424,10 +423,10 @@ const adminCheckV2 = (req, res, next) => {
 }
 
 //delete an user
-app.delete('/delete-user', authCheck, adminCheck, (req, res) => {
-    const {uid} = req.body;
+app.delete('/delete-user/:uid/:userid', authCheck, adminCheckV2, (req, res) => {
+    const {uid, userid} = req.params;
 
-    User.deleteOne({userId: uid}).then((data) => {
+    User.deleteOne({userId: userid}).then((data) => {
         res.json({
             success: true,
             message: data,
@@ -459,13 +458,111 @@ app.get('/get-all-seller/:uid', authCheck,  adminCheckV2, (req, res) => {
 });
 
 // get buyers
-app.get('/get-all-seller/:uid', authCheck,  adminCheckV2, (req, res) => {
+app.get('/get-all-buyer/:uid', authCheck,  adminCheckV2, (req, res) => {
 
     User.find().then((data) =>{
         const finalObj = data.filter((elem) => elem.role === 'buyer');
         res.json({
             success: true,
             message: finalObj,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
+
+// get product info
+app.get('/get-product-info/:id', authCheck, (req, res) => {
+    const {id} = req.params;
+    const updatedId = mongoose.Types.ObjectId(id);
+
+    Product.findById(updatedId).then((result) => {
+        res.json({
+            success: true,
+            message: result,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
+
+// payment
+app.post("/create-payment-intent", async (req, res) => {
+    const { price } = req.body;
+    const amount = (price) * 100;
+  
+    // Create a PaymentIntent with the order amount and currency
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: "usd",
+      "payment_method_types": [
+        "card"
+      ]
+    });
+  
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+});
+
+// update payment details
+app.patch('/update-payment', authCheck, (req, res) => {
+    const {price, paymentId, user, id} = req.body;
+
+    const paymentObject = {
+        price,
+        paymentId,
+        user,
+    };
+
+    const updatedId = mongoose.Types.ObjectId(id);
+
+    Product.updateOne({_id: updatedId}, {$set: {isPaid: true, paymentDetails: paymentObject}}).then((result) => {
+        res.json({
+            success: true,
+            message: result,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
+
+// get reported items
+app.get('/get-reported-items/:uid', authCheck, adminCheckV2, (req, res) => {
+    User.find().populate('report').then((result) => {
+        const updateObj = result.map((data) => data.report);
+        let finalObj = [];
+        for(let i=0; i<updateObj.length; i++){
+            finalObj = [...finalObj, ...updateObj[i]];
+        }
+
+        res.json({
+            success: true,
+            message: finalObj,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+})
+
+app.patch('/verify-user/:uid', authCheck, adminCheckV2, (req, res) => {
+    const {uId} = req.body;
+    User.updateOne({userId: uId}, {$set: {isVarified: true}}).then((result) => {
+        res.json({
+            success: true,
+            message: result,
         })
     }).catch((err) => {
         res.json({

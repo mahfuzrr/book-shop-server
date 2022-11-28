@@ -37,6 +37,7 @@ const userSchema = mongoose.Schema(
         {
             type: mongoose.Types.ObjectId,
             ref: 'Product',
+            unique: true,
         }
     ],
     report:[

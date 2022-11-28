@@ -15,10 +15,14 @@ const productSchema = mongoose.Schema(
             default: null,
         },
         paymentDetails:{
-            type: String,
+            type: Object,
             default: null,
         },
         isBooked:{
+            type: Boolean,
+            default: false,
+        },
+        isPaid:{
             type: Boolean,
             default: false,
         },
