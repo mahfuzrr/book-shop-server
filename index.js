@@ -572,6 +572,22 @@ app.patch('/verify-user/:uid', authCheck, adminCheckV2, (req, res) => {
     })
 });
 
+app.get('/get-verify-info/:id', authCheck, (req, res) => {
+    const {id} = req.params;
+
+    User.findOne({userId: id}).then((result) => {
+        res.json({
+            success: true,
+            message: result?.isVarified,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+})
+
 // 404 handler
 app.use(notFoundHandler);
 
