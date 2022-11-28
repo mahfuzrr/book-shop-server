@@ -365,6 +365,115 @@ app.get('/get-advertise-items', (req, res)=>{
     })
 });
 
+//report to admin
+app.patch('/report-to-admin', authCheck, (req, res) => {
+    const {id, uid} = req.body;
+    const updatedId = mongoose.Types.ObjectId(id);
+
+    User.updateOne({userId: uid}, {$addToSet: {report: [updatedId]}}).then((result) => {
+        res.json({
+            success: true,
+            message: result,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        });
+    })
+});
+
+const adminCheck = (req, res, next) => {
+    const {uid} = req.body;
+    User.findOne({userId: uid}).then((data) => {
+        if(data?.role === 'admin'){
+            next();
+        }
+        else{
+            res.json({
+                success: false,
+                message: "Unauthorized Access!",
+            })
+        }
+    }).catch((err) => {
+        req.json({
+            success: false,
+            message: "Unauthorized Access!",
+        })
+    })
+}
+
+const adminCheckV2 = (req, res, next) => {
+    const {uid} = req.params;
+    User.findOne({userId: uid}).then((data) => {
+        if(data?.role === 'admin'){
+            next();
+        }
+        else{
+            res.json({
+                success: false,
+                message: "Unauthorized Access!",
+            })
+        }
+    }).catch((err) => {
+        req.json({
+            success: false,
+            message: "Unauthorized Access!",
+        })
+    })
+}
+
+//delete an user
+app.delete('/delete-user', authCheck, adminCheck, (req, res) => {
+    const {uid} = req.body;
+
+    User.deleteOne({userId: uid}).then((data) => {
+        res.json({
+            success: true,
+            message: data,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+})
+
+// get all seller
+app.get('/get-all-seller/:uid', authCheck,  adminCheckV2, (req, res) => {
+
+    User.find().then((data) =>{
+
+        const finalObj = data.filter((elem) => elem.role === 'seller');
+        res.json({
+            success: true,
+            message: finalObj,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
+
+// get buyers
+app.get('/get-all-seller/:uid', authCheck,  adminCheckV2, (req, res) => {
+
+    User.find().then((data) =>{
+        const finalObj = data.filter((elem) => elem.role === 'buyer');
+        res.json({
+            success: true,
+            message: finalObj,
+        })
+    }).catch((err) => {
+        res.json({
+            success: false,
+            message: err.message,
+        })
+    })
+});
 
 // 404 handler
 app.use(notFoundHandler);
