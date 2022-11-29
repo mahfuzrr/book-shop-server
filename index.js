@@ -114,6 +114,7 @@ app.post('/register', (req, res) => {
 
 });
 
+// get user role
 app.get('/get-user-role/:id', authCheck, (req, res) =>{
     const {id} = req.params;
     //console.log(id);
