@@ -572,6 +572,7 @@ app.patch('/verify-user/:uid', authCheck, adminCheckV2, (req, res) => {
     })
 });
 
+// getting verify user information
 app.get('/get-verify-info/:id', authCheck, (req, res) => {
     const {id} = req.params;
 
