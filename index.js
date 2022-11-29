@@ -402,6 +402,7 @@ const adminCheck = (req, res, next) => {
     })
 }
 
+// admin checking middleware
 const adminCheckV2 = (req, res, next) => {
     const {uid} = req.params;
     User.findOne({userId: uid}).then((data) => {
